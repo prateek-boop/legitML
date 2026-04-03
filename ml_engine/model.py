@@ -173,34 +173,34 @@ class ThreatDetectionModel:
         x2 = layers.BatchNormalization()(feature_input)
         
         # First dense block
-        x2 = layers.Dense(256, activation='relu', kernel_regularizer=keras.regularizers.l2(0.001))(x2)
+        x2 = layers.Dense(256, activation='relu', kernel_regularizer=keras.regularizers.l2(0.005))(x2)
         x2 = layers.BatchNormalization()(x2)
-        x2 = layers.Dropout(0.3)(x2)
+        x2 = layers.Dropout(0.4)(x2)
         
         # Second dense block with residual-like connection
         x2_shortcut = layers.Dense(128)(x2)  # Project for residual
-        x2 = layers.Dense(128, activation='relu', kernel_regularizer=keras.regularizers.l2(0.001))(x2)
+        x2 = layers.Dense(128, activation='relu', kernel_regularizer=keras.regularizers.l2(0.005))(x2)
         x2 = layers.BatchNormalization()(x2)
-        x2 = layers.Dropout(0.3)(x2)
+        x2 = layers.Dropout(0.4)(x2)
         x2 = layers.Dense(128, activation='relu')(x2)
         x2 = layers.Add()([x2, x2_shortcut])  # Residual connection
         x2 = layers.Activation('relu')(x2)
         
         # Third dense block
         x2 = layers.Dense(64, activation='relu')(x2)
-        x2 = layers.Dropout(0.3)(x2)
+        x2 = layers.Dropout(0.4)(x2)
         
         # === Enhanced Fusion Layer ===
         fused = layers.Concatenate(name="fusion")([x1, x2])
         
         # Multi-layer fusion
-        x = layers.Dense(256, activation='relu')(fused)
+        x = layers.Dense(256, activation='relu', kernel_regularizer=keras.regularizers.l2(0.005))(fused)
+        x = layers.BatchNormalization()(x)
+        x = layers.Dropout(0.5)(x)
+        
+        x = layers.Dense(128, activation='relu', kernel_regularizer=keras.regularizers.l2(0.005))(x)
         x = layers.BatchNormalization()(x)
         x = layers.Dropout(0.4)(x)
-        
-        x = layers.Dense(128, activation='relu')(x)
-        x = layers.BatchNormalization()(x)
-        x = layers.Dropout(0.3)(x)
         
         x = layers.Dense(64, activation='relu')(x)
         

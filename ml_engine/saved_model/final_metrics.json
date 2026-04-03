@@ -1,0 +1,26 @@
+{
+  "loss": 0.12483567744493484,
+  "accuracy": 0.9511333107948303,
+  "class_metrics": {
+    "safe": {
+      "accuracy": 0.9006472491909385,
+      "count": 6180
+    },
+    "phishing": {
+      "accuracy": 0.9888702225955481,
+      "count": 4762
+    },
+    "malware": {
+      "accuracy": 0.9761560693641619,
+      "count": 2768
+    },
+    "data_leak": {
+      "accuracy": 1.0,
+      "count": 774
+    },
+    "scam": {
+      "accuracy": 1.0,
+      "count": 516
+    }
+  }
+}

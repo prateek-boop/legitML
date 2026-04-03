@@ -33,7 +33,7 @@ TRAINING_CONFIG = {
     "batch_size": 64,
     "epochs": 50,
     "learning_rate": 0.001,
-    "early_stopping_patience": 10,  # More patience for convergence
+    "early_stopping_patience": 7,  # Less patience to avoid overfitting
     "validation_split": 0.1,
     "test_split": 0.1,
 }
@@ -43,11 +43,11 @@ THREAT_CLASSES = ["safe", "phishing", "malware", "data_leak", "scam"]
 
 # Class Weights for Imbalanced Data
 CLASS_WEIGHTS = {
-    0: 1.0,    # safe
-    1: 1.5,    # phishing
-    2: 2.0,    # malware
-    3: 1.8,    # data_leak
-    4: 2.2,    # scam
+    0: 1.5,    # safe (increased to reduce False Positives)
+    1: 1.0,    # phishing
+    2: 1.2,    # malware
+    3: 1.2,    # data_leak
+    4: 1.5,    # scam
 }
 
 # Threat Levels
