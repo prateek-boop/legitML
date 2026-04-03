@@ -20,8 +20,53 @@ warnings.filterwarnings('ignore')
 # Add project root to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-# TensorFlow setup
+# TensorFlow setup - must be before importing TF
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
+def setup_gpu():
+    """Configure GPU/CUDA for TensorFlow."""
+    import tensorflow as tf
+    
+    print("\n" + "="*60)
+    print(" 🖥️  GPU/CUDA CONFIGURATION")
+    print("="*60)
+    
+    # List available devices
+    gpus = tf.config.list_physical_devices('GPU')
+    cpus = tf.config.list_physical_devices('CPU')
+    
+    print(f"TensorFlow version: {tf.__version__}")
+    print(f"Available CPUs: {len(cpus)}")
+    print(f"Available GPUs: {len(gpus)}")
+    
+    if gpus:
+        try:
+            # Enable memory growth to avoid OOM
+            for gpu in gpus:
+                tf.config.experimental.set_memory_growth(gpu, True)
+                print(f"✅ GPU found: {gpu.name}")
+            
+            # Show GPU details
+            from tensorflow.python.client import device_lib
+            devices = device_lib.list_local_devices()
+            for device in devices:
+                if device.device_type == 'GPU':
+                    # Parse memory info
+                    desc = device.physical_device_desc
+                    print(f"   Device: {desc}")
+            
+            print(f"\n🚀 Training will use GPU acceleration!")
+            return True
+        except RuntimeError as e:
+            print(f"⚠️  GPU setup error: {e}")
+            return False
+    else:
+        print("\n⚠️  No GPU detected. Training will use CPU.")
+        print("   For GPU support, install: pip install tensorflow[and-cuda]")
+        return False
+
+# Setup GPU before other imports
+GPU_AVAILABLE = setup_gpu()
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import classification_report, confusion_matrix
@@ -220,7 +265,7 @@ def split_data(
     }
 
 
-def train_model(data: Dict, epochs: int = None) -> Tuple[ThreatDetectionModel, Dict]:
+def train_model(data: Dict, epochs: int = None, fresh: bool = False) -> Tuple[ThreatDetectionModel, Dict]:
     """Train the model on the provided data."""
     
     print_header("TRAINING MODEL")
@@ -245,6 +290,7 @@ def train_model(data: Dict, epochs: int = None) -> Tuple[ThreatDetectionModel, D
         epochs=epochs,
         batch_size=TRAINING_CONFIG.get("batch_size", 64),
         class_weights=CLASS_WEIGHTS,
+        resume=not fresh,
     )
     
     return model, history
@@ -371,12 +417,16 @@ def save_training_results(model: ThreatDetectionModel, history: Dict, results: D
     print(f"Metrics saved to: {metrics_path}")
 
 
-def main(dataset_type: str = "synthetic", n_samples: int = 50000, epochs: int = 30):
+def main(dataset_type: str = "synthetic", n_samples: int = 50000, epochs: int = 30, fresh: bool = False):
     """Main training pipeline."""
     
     print_header("🛡️ SHIELDNET TRAINING PIPELINE")
     print("Deep Learning URL Threat Detection System")
     print(f"Dataset: {dataset_type.upper()}")
+    if fresh:
+        print("Mode: FRESH (ignoring checkpoints)")
+    else:
+        print("Mode: RESUME (will continue from checkpoint if available)")
     
     # Ensure directories exist
     SAVED_MODEL_DIR.mkdir(parents=True, exist_ok=True)
@@ -397,7 +447,7 @@ def main(dataset_type: str = "synthetic", n_samples: int = 50000, epochs: int = 
     data = split_data(url_tokens, features, labels)
     
     # Step 3: Train model
-    model, history = train_model(data, epochs=epochs)
+    model, history = train_model(data, epochs=epochs, fresh=fresh)
     
     # Step 4: Evaluate
     results = evaluate_model(model, data)

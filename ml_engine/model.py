@@ -246,7 +246,8 @@ class ThreatDetectionModel:
         epochs: Optional[int] = None,
         batch_size: Optional[int] = None,
         class_weights: Optional[Dict] = None,
-        save_path: Optional[str] = None
+        save_path: Optional[str] = None,
+        resume: bool = True
     ) -> Dict:
         """
         Train the model on provided data.
@@ -260,6 +261,7 @@ class ThreatDetectionModel:
             batch_size: Batch size
             class_weights: Class weights for imbalanced data
             save_path: Path to save the best model
+            resume: If True, automatically resume from latest checkpoint
             
         Returns:
             Training history dictionary
@@ -270,6 +272,21 @@ class ThreatDetectionModel:
         save_path = save_path or str(SAVED_MODEL_DIR / "best_model.keras")
         checkpoint_dir = SAVED_MODEL_DIR / "checkpoints"
         checkpoint_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Check for existing checkpoints and resume
+        initial_epoch = 0
+        if resume:
+            checkpoints = self.list_checkpoints()
+            if checkpoints:
+                print(f"\n🔄 Found {len(checkpoints)} existing checkpoint(s)")
+                latest_epoch = self.load_checkpoint()
+                if latest_epoch is not None:
+                    initial_epoch = latest_epoch + 1
+                    print(f"✅ Resuming from epoch {initial_epoch}")
+                    if initial_epoch >= epochs:
+                        print(f"⚠️  Already trained {initial_epoch} epochs (requested {epochs})")
+                        print(f"   Increase --epochs or delete checkpoints to retrain")
+                        return {}
         
         # Callbacks with checkpoint recording
         callbacks = [
@@ -298,7 +315,11 @@ class ThreatDetectionModel:
         ]
         
         print(f"\n📁 Checkpoints will be saved to: {checkpoint_dir}")
-        print(f"📁 Best model will be saved to: {save_path}\n")
+        print(f"📁 Best model will be saved to: {save_path}")
+        if initial_epoch > 0:
+            print(f"🔄 Starting from epoch {initial_epoch + 1}/{epochs}\n")
+        else:
+            print(f"🆕 Starting fresh training for {epochs} epochs\n")
         
         # Train
         self.history = self.model.fit(
@@ -306,6 +327,7 @@ class ThreatDetectionModel:
             labels,
             validation_data=validation_data,
             epochs=epochs,
+            initial_epoch=initial_epoch,
             batch_size=batch_size,
             class_weight=class_weights,
             callbacks=callbacks,
@@ -428,17 +450,35 @@ class ThreatDetectionModel:
         """
         Load from a specific checkpoint.
         If no path given, loads the latest checkpoint.
+        Returns the epoch number from the checkpoint filename.
         """
         if checkpoint_path is None:
             checkpoints = self.list_checkpoints()
             if not checkpoints:
                 print("No checkpoints found!")
-                return False
+                return None
             checkpoint_path = checkpoints[0]
             print(f"Loading latest checkpoint: {checkpoint_path}")
         
         self.load(checkpoint_path)
-        return True
+        
+        # Extract epoch number from filename (format: epoch_XX_acc_0.XXXX.keras)
+        import re
+        match = re.search(r'epoch_(\d+)_', checkpoint_path)
+        if match:
+            return int(match.group(1))
+        return None
+    
+    def get_latest_epoch(self) -> int:
+        """Get the epoch number from the latest checkpoint, or 0 if none."""
+        checkpoints = self.list_checkpoints()
+        if not checkpoints:
+            return 0
+        import re
+        match = re.search(r'epoch_(\d+)_', checkpoints[0])
+        if match:
+            return int(match.group(1))
+        return 0
     
     def get_feature_branch_output(
         self, 

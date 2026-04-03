@@ -11,6 +11,12 @@ Usage:
     # Train with combined real + synthetic data (best results)
     python main.py train --dataset combined
     
+    # Resume training from last checkpoint (automatic by default)
+    python main.py train --epochs 50
+    
+    # Start fresh (ignore checkpoints)
+    python main.py train --fresh --epochs 50
+    
     # Start the API server
     python main.py serve
     
@@ -29,16 +35,17 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 
 
-def train(dataset_type: str = "synthetic", samples: int = 50000, epochs: int = 30):
+def train(dataset_type: str = "synthetic", samples: int = 50000, epochs: int = 30, fresh: bool = False):
     """Train the ShieldNet model."""
     print("🛡️ Starting ShieldNet Training...")
     print(f"   Dataset: {dataset_type}")
     print(f"   Samples: {samples:,}")
     print(f"   Epochs: {epochs}")
+    print(f"   Fresh: {fresh}")
     print()
     
     from ml_engine.train_model import main as train_main
-    train_main(dataset_type=dataset_type, n_samples=samples, epochs=epochs)
+    train_main(dataset_type=dataset_type, n_samples=samples, epochs=epochs, fresh=fresh)
 
 
 def download_data():
@@ -132,6 +139,7 @@ def main():
         dataset_type = "synthetic"
         samples = 50000
         epochs = 30
+        fresh = False
         
         i = 2
         while i < len(sys.argv):
@@ -144,10 +152,13 @@ def main():
             elif sys.argv[i] == "--epochs" and i + 1 < len(sys.argv):
                 epochs = int(sys.argv[i + 1])
                 i += 2
+            elif sys.argv[i] == "--fresh":
+                fresh = True
+                i += 1
             else:
                 i += 1
         
-        train(dataset_type=dataset_type, samples=samples, epochs=epochs)
+        train(dataset_type=dataset_type, samples=samples, epochs=epochs, fresh=fresh)
         
     elif command == "serve":
         serve()
